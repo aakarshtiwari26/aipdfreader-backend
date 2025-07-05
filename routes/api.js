@@ -7,14 +7,13 @@ const router = express.Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// MongoDB Schema
 const DocumentSchema = new mongoose.Schema({
   text: { type: String, required: true },
   summary: { type: String, required: true },

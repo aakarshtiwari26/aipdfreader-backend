@@ -6,10 +6,8 @@ require('dotenv').config();
 
 const app = express();
 
-// Connect to MongoDB
 connectDB();
 
-// CORS configuration
 const allowedOrigins = [
     'https://aipdfreader-three.vercel.app',
     'https://reader.aakarshtiwari.com'
@@ -28,15 +26,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Routes
 app.use('/api', apiRoutes);
 
-// Health check endpoint
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'healthy' });
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     res.status(500).json({ error: 'Internal server error', details: err.message });
