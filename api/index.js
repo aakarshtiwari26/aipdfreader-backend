@@ -56,6 +56,9 @@ app.get('/api', (req, res) => {
   res.send('🚀 Smart PDF Reader Backend (Serverless) is running!');
 });
 
+// ✅ Prevent crash on favicon.ico request
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // ✅ Wrap app with serverless handler
 const handler = async (req, res) => {
   try {
