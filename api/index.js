@@ -8,7 +8,7 @@ import pdfRoutes from '../routes/pdfRoutes.js';
 dotenv.config();
 const app = express();
 
-// ✅ Allowed origins for CORS
+// ✅ CORS Config
 const allowedOrigins = [
   'https://aipdfreader-three.vercel.app',
   'https://aipdfreader-8taieg7r3-aakarsh-tiwaris-projects.vercel.app',
@@ -17,7 +17,6 @@ const allowedOrigins = [
   'http://localhost:3000'
 ];
 
-// ✅ CORS middleware
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -29,30 +28,43 @@ app.use(cors({
   credentials: true
 }));
 
-// ✅ Body parser
 app.use(express.json());
+
+// ✅ MongoDB Connection (guarded for serverless)
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectDB() {
+  if (cached.conn) return cached.conn;
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(process.env.MONGO_URI, {
+      dbName: 'smartpdf',
+      bufferCommands: false
+    }).then(m => m);
+  }
+  cached.conn = await cached.promise;
+  return cached.conn;
+}
 
 // ✅ Routes
 app.use('/api', pdfRoutes);
 
-// ✅ Root route for testing
+// ✅ Root
 app.get('/api', (req, res) => {
   res.send('🚀 Smart PDF Reader Backend (Serverless) is running!');
 });
 
-// ✅ Connect MongoDB once
-let isConnected = false;
-const connectDB = async () => {
-  if (isConnected) return;
+// ✅ Wrap app with serverless handler
+const handler = async (req, res) => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    isConnected = true;
-    console.log('✅ MongoDB connected');
+    await connectDB();
+    return serverless(app)(req, res);
   } catch (err) {
-    console.error('❌ MongoDB error:', err);
+    console.error('❌ Server error:', err);
+    res.status(500).send('Internal Server Error');
   }
 };
-connectDB();
 
-// ✅ Export for Vercel serverless
-export const handler = serverless(app);
+export default handler;
