@@ -8,13 +8,16 @@ import pdfRoutes from '../routes/pdfRoutes.js';
 dotenv.config();
 const app = express();
 
-// ✅ CORS Configuration
+// ✅ Allowed origins for CORS
 const allowedOrigins = [
   'https://aipdfreader-three.vercel.app',
-  'http://localhost:3000',
-  'https://smart-pdf-reader-backend.vercel.app'
+  'https://aipdfreader-8taieg7r3-aakarsh-tiwaris-projects.vercel.app',
+  'https://smart-pdf-reader-backend.vercel.app',
+  'https://smart-pdf-reader-backend-hwtsqdprc-aakarsh-tiwaris-projects.vercel.app',
+  'http://localhost:3000'
 ];
 
+// ✅ CORS middleware
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -26,16 +29,18 @@ app.use(cors({
   credentials: true
 }));
 
-// ✅ Middleware
+// ✅ Body parser
 app.use(express.json());
+
+// ✅ Routes
 app.use('/api', pdfRoutes);
 
-// ✅ Root Route
-app.get('/', (req, res) => {
+// ✅ Root route for testing
+app.get('/api', (req, res) => {
   res.send('🚀 Smart PDF Reader Backend (Serverless) is running!');
 });
 
-// ✅ MongoDB Connection (only once)
+// ✅ Connect MongoDB once
 let isConnected = false;
 const connectDB = async () => {
   if (isConnected) return;
@@ -49,5 +54,5 @@ const connectDB = async () => {
 };
 connectDB();
 
-// ✅ Export as serverless handler
+// ✅ Export for Vercel serverless
 export const handler = serverless(app);
