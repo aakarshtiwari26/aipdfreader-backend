@@ -23,7 +23,6 @@ out/
 public/build/
 coverage/
 .vercel/
-vercel.json
 .render/
 .render-build/
 .render-config.json
