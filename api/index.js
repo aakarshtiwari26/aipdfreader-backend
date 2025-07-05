@@ -30,7 +30,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// ✅ MongoDB Connection (guarded for serverless)
+// ✅ MongoDB Connection (serverless-safe)
 let cached = global.mongoose;
 if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
@@ -56,18 +56,20 @@ app.get('/api', (req, res) => {
   res.send('🚀 Smart PDF Reader Backend (Serverless) is running!');
 });
 
-// ✅ Prevent crash on favicon.ico request
+// ✅ Favicon fix (optional)
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// ✅ Wrap app with serverless handler
-const handler = async (req, res) => {
-  try {
-    await connectDB();
-    return serverless(app)(req, res);
-  } catch (err) {
-    console.error('❌ Server error:', err);
-    res.status(500).send('Internal Server Error');
-  }
+// ✅ Wrap for Vercel (final pattern)
+let serverlessHandler;
+
+const createHandler = async () => {
+  await connectDB();
+  return serverless(app);
 };
 
-export default handler;
+export default async function handler(req, res) {
+  if (!serverlessHandler) {
+    serverlessHandler = await createHandler();
+  }
+  return serverlessHandler(req, res);
+}
