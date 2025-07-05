@@ -1,14 +1,11 @@
-// smart-pdf-reader/backend/controllers/pdfController.js
 import pdfParse from 'pdf-parse';
 import { generateSummary, generateAnswer, generateRelated } from '../utils/openai.js';
 
-let cachedText = ''; // Store parsed text for Q&A
+let cachedText = '';
 
 export const uploadPDF = async (req, res) => {
   try {
-    if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ error: 'No PDF file provided' });
-    }
+    if (!req.file?.buffer) return res.status(400).json({ error: 'No PDF provided' });
 
     const data = await pdfParse(req.file.buffer);
     const text = data.text;
@@ -20,7 +17,7 @@ export const uploadPDF = async (req, res) => {
     res.json({ summary, related });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to process PDF' });
+    res.status(500).json({ error: 'PDF processing failed' });
   }
 };
 
@@ -31,6 +28,6 @@ export const answerQuestion = async (req, res) => {
     res.json({ answer });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to answer question' });
+    res.status(500).json({ error: 'Answer generation failed' });
   }
 };
