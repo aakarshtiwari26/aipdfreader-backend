@@ -1,4 +1,3 @@
-// backend/routes/pdfRoutes.js
 import express from 'express';
 import multer from 'multer';
 import { uploadPDF, answerQuestion } from '../controllers/pdfController.js';
