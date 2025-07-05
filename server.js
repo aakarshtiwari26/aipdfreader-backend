@@ -9,9 +9,20 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
-// Middleware
+// CORS configuration
+const allowedOrigins = [
+    'https://aipdfreader-three.vercel.app',
+    'https://reader.aakarshtiwari.com'
+];
+
 app.use(cors({
-    origin: 'https://aipdfreader-three.vercel.app',
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST'],
     credentials: true
 }));
