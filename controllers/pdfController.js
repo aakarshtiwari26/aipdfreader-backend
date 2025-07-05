@@ -1,20 +1,21 @@
-import fs from 'fs';
+// smart-pdf-reader/backend/controllers/pdfController.js
 import pdfParse from 'pdf-parse';
 import { generateSummary, generateAnswer, generateRelated } from '../utils/openai.js';
-import { parsePDF } from '../utils/pdfParser.js';
 
 let cachedText = ''; // Store parsed text for Q&A
 
 export const uploadPDF = async (req, res) => {
   try {
-    const filePath = req.file.path;
-    const text = await parsePDF(filePath);
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ error: 'No PDF file provided' });
+    }
+
+    const data = await pdfParse(req.file.buffer);
+    const text = data.text;
     cachedText = text;
 
     const summary = await generateSummary(text);
     const related = await generateRelated(text);
-
-    fs.unlinkSync(filePath); // Clean up uploaded file
 
     res.json({ summary, related });
   } catch (err) {
