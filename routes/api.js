@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const pdfParse = require("pdf-parse");
-const OpenAI = require("openai/index.mjs");
+const { OpenAI } = require("openai");
 const mongoose = require("mongoose");
 const router = express.Router();
 
