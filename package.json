@@ -1,5 +1,5 @@
 {
-    "name": "smart-pdf-analyzer-backend",
+    "name": "ai-pdf-reader-backend",
     "version": "1.0.0",
     "main": "server.js",
     "scripts": {
