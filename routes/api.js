@@ -29,7 +29,7 @@ router.post('/upload', upload.single('pdf'), async (req, res) => {
         }
 
         const dataBuffer = req.file.buffer;
-        const data = await pdfParse(dataBuffer, { max: 100 }); // Limit to 100 pages
+        const data = await pdfParse(dataBuffer, { max: 100 });
         const text = data.text;
 
         if (!text || text.length < 10) {
@@ -40,7 +40,7 @@ router.post('/upload', upload.single('pdf'), async (req, res) => {
             model: 'gpt-3.5-turbo',
             messages: [
                 { role: 'system', content: 'Summarize the following text in 100 words or less. Be concise and capture key points.' },
-                { role: 'user', content: text.substring(0, 4000) } // Limit input to avoid token issues
+                { role: 'user', content: text.substring(0, 4000) }
             ],
             max_tokens: 150,
             temperature: 0.5

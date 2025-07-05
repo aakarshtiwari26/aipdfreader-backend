@@ -11,7 +11,7 @@ connectDB();
 
 // Middleware
 app.use(cors({
-    origin: 'https://aipdfreader-three.vercel.app', // Your Vercel frontend URL
+    origin: 'https://aipdfreader-three.vercel.app',
     methods: ['GET', 'POST'],
     credentials: true
 }));
@@ -31,7 +31,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error', details: err.message });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
