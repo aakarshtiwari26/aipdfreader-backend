@@ -11,12 +11,11 @@ const app = express();
 const allowedOrigins = [
   'https://aipdfreader-three.vercel.app', // Your Vercel frontend domain
   'http://localhost:3000',                // Optional: for local development
-  'https://smart-pdf-reader-backend.vercel.app'
+  'https://smart-pdf-reader-backend.vercel.app' // Optional: backend self-call
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -30,6 +29,11 @@ app.use(cors({
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 app.use('/api', pdfRoutes);
+
+// ✅ Root Route for health check or browser test
+app.get('/', (req, res) => {
+  res.send('🚀 Smart PDF Reader Backend is running!');
+});
 
 // ✅ MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
