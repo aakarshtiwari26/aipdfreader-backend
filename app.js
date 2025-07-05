@@ -10,7 +10,8 @@ const app = express();
 // ✅ CORS Configuration
 const allowedOrigins = [
   'https://aipdfreader-three.vercel.app', // Your Vercel frontend domain
-  'http://localhost:3000'                 // Optional: for local development
+  'http://localhost:3000',                // Optional: for local development
+  'https://smart-pdf-reader-backend.vercel.app'
 ];
 
 app.use(cors({
