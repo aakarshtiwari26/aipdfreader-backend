@@ -11,7 +11,7 @@ connectDB();
 
 // Middleware
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'https://aipdfreader-three.vercel.app', // Replace with Vercel URL
+    origin: 'https://aipdfreader-three.vercel.app', // Your Vercel frontend URL
     methods: ['GET', 'POST'],
     credentials: true
 }));
