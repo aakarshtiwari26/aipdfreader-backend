@@ -30,6 +30,11 @@ router.post("/upload", upload.single("pdf"), async (req, res) => {
     const dataBuffer = req.file.buffer;
     const data = await pdfParse(dataBuffer, { max: 100 });
     const text = data.text;
+    const pageCount = data.numpages;
+
+    if (pageCount > 10) {
+      return res.status(400).json({ error: "PDF exceeds 10-page limit" });
+    }
 
     if (!text || text.length < 10) {
       return res.status(400).json({ error: "No readable text found in PDF" });
