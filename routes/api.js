@@ -45,12 +45,11 @@ router.post("/upload", upload.single("pdf"), async (req, res) => {
       messages: [
         {
           role: "system",
-          content:
-            "Summarize the following text in 100 words or less. Be concise and capture key points.",
+          content: "Summarize text in 100 words or less.",
         },
-        { role: "user", content: text.substring(0, 4000) },
+        { role: "user", content: text.substring(0, 2000) },
       ],
-      max_tokens: 150,
+      max_tokens: 100,
       temperature: 0.5,
     });
 
@@ -81,18 +80,14 @@ router.post("/ask", async (req, res) => {
       messages: [
         {
           role: "system",
-          content:
-            "Answer the question based on the provided context. Be precise and relevant.",
+          content: "Answer based on context, be concise.",
         },
         {
           role: "user",
-          content: `Context: ${context.substring(
-            0,
-            4000
-          )}\nQuestion: ${question}`,
+          content: `Context: ${context.substring(0, 2000)}\nQuestion: ${question}`,
         },
       ],
-      max_tokens: 200,
+      max_tokens: 150,
       temperature: 0.5,
     });
 
