@@ -10,7 +10,7 @@ connectDB();
 
 const allowedOrigins = [
     'https://aipdfreader-three.vercel.app',
-    'https://reader.aakarshtiwari.com'
+    'https://pagify.aakarshtiwari.com'
 ];
 
 app.use(cors({
