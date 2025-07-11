@@ -1,9 +1,21 @@
 {
   "version": 2,
-  "functions": {
-    "api/*.js": {
-      "memory": 512,
-      "maxDuration": 10
+  "builds": [
+    {
+      "src": "api/*.js",
+      "use": "@vercel/node"
     }
-  }
+  ],
+  "routes": [
+    {
+      "src": "/api/upload",
+      "methods": ["POST"],
+      "dest": "api/upload.js"
+    },
+    {
+      "src": "/api/ask",
+      "methods": ["POST"],
+      "dest": "api/ask.js"
+    }
+  ]
 }
