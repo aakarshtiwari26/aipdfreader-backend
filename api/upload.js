@@ -1,10 +1,16 @@
+// api/upload.js
+import { IncomingForm } from "formidable";
+import fs from "fs";
 import pdfParse from "pdf-parse";
 import { OpenAI } from "openai";
 import connectDB from "../lib/db.js";
 import Document from "../models/Document.js";
 
+// Disable default body parser for file upload
 export const config = {
-  api: { bodyParser: false },
+  api: {
+    bodyParser: false,
+  },
 };
 
 export default async function handler(req, res) {
@@ -13,25 +19,24 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  try {
+    const form = new IncomingForm({ maxFileSize: 10 * 1024 * 1024 }); // 10MB limit
 
-  const busboy = await import("busboy");
-  const bb = busboy.default({ headers: req.headers, limits: { fileSize: 5 * 1024 * 1024 } });
+    form.parse(req, async (err, fields, files) => {
+      if (err) {
+        console.error("Form parse error:", err);
+        return res.status(400).json({ error: "Failed to parse form data" });
+      }
 
-  let buffer = Buffer.alloc(0);
+      const file = files.pdf;
+      if (!file || Array.isArray(file)) {
+        return res.status(400).json({ error: "No PDF uploaded" });
+      }
 
-  bb.on("file", (_, file) => {
-    file.on("data", (data) => {
-      buffer = Buffer.concat([buffer, data]);
-    });
-  });
-
-  bb.on("finish", async () => {
-    try {
-      const data = await pdfParse(buffer, { max: 100 });
+      const buffer = fs.readFileSync(file.filepath);
+      const data = await pdfParse(buffer);
       const text = data.text;
       const pageCount = data.numpages;
 
@@ -39,7 +44,6 @@ export default async function handler(req, res) {
       if (!text || text.length < 10) return res.status(400).json({ error: "No readable text found" });
 
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
       const summaryResponse = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
@@ -56,12 +60,10 @@ export default async function handler(req, res) {
       const doc = new Document({ text, summary });
       await doc.save();
 
-      res.status(200).json({ text, summary });
-    } catch (error) {
-      console.error("Upload error:", error);
-      res.status(500).json({ error: "Failed to process PDF", details: error.message });
-    }
-  });
-
-  req.pipe(bb);
+      return res.status(200).json({ text, summary });
+    });
+  } catch (error) {
+    console.error("Upload error:", error);
+    return res.status(500).json({ error: "Failed to process PDF", details: error.message });
+  }
 }
