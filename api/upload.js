@@ -1,4 +1,3 @@
-// api/upload.js
 import pdfParse from "pdf-parse";
 import { OpenAI } from "openai";
 import connectDB from "../lib/db";
@@ -19,6 +18,7 @@ export default async function handler(req, res) {
   const bb = busboy.default({ headers: req.headers, limits: { fileSize: 5 * 1024 * 1024 } });
 
   let buffer = Buffer.alloc(0);
+  let errorSent = false;
 
   bb.on("file", (_, file) => {
     file.on("data", (data) => {
@@ -26,14 +26,30 @@ export default async function handler(req, res) {
     });
   });
 
+  bb.on("error", (err) => {
+    if (!errorSent) {
+      errorSent = true;
+      res.status(400).json({ error: "Invalid file upload", details: err.message });
+    }
+  });
+
   bb.on("finish", async () => {
     try {
+      if (!buffer || buffer.length === 0) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
       const data = await pdfParse(buffer, { max: 100 });
       const text = data.text;
       const pageCount = data.numpages;
 
-      if (pageCount > 10) return res.status(400).json({ error: "PDF exceeds 10-page limit" });
-      if (!text || text.length < 10) return res.status(400).json({ error: "No readable text found" });
+      if (pageCount > 10) {
+        return res.status(400).json({ error: "PDF exceeds 10-page limit" });
+      }
+
+      if (!text || text.length < 10) {
+        return res.status(400).json({ error: "No readable text found in PDF" });
+      }
 
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -56,9 +72,16 @@ export default async function handler(req, res) {
       res.status(200).json({ text, summary });
     } catch (error) {
       console.error("Upload error:", error);
-      res.status(500).json({ error: "Failed to process PDF", details: error.message });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to process PDF", details: error.message });
+      }
     }
   });
 
-  req.pipe(bb);
+  try {
+    req.pipe(bb);
+  } catch (err) {
+    console.error("Pipe error:", err);
+    res.status(500).json({ error: "Internal error while parsing file" });
+  }
 }
