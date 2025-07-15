@@ -96,8 +96,15 @@ router.post("/upload", upload.single("pdf"), async (req, res) => {
           temperature: 0.5,
         });
 
-        const parsed = JSON.parse(structureResponse.choices[0].message.content || '[{"heading": "Full Document", "content": "' + text.substring(0, 4000) + '"}]');
-        sections = Array.isArray(parsed) ? parsed : [{ heading: "Full Document", content: text }];
+        const parsed = JSON.parse(
+          structureResponse.choices[0].message.content ||
+            '[{"heading": "Full Document", "content": "' +
+              text.substring(0, 4000) +
+              '"}]'
+        );
+        sections = Array.isArray(parsed)
+          ? parsed
+          : [{ heading: "Full Document", content: text }];
       } catch (gptError) {
         console.error("GPT section extraction failed:", gptError.message);
         sections = [{ heading: "Full Document", content: text }];
@@ -120,16 +127,23 @@ router.post("/upload", upload.single("pdf"), async (req, res) => {
           messages: [
             {
               role: "system",
-              content: "Summarize the following section in 50 words or less. Be concise.",
+              content:
+                "Summarize the following section in 50 words or less. Be concise.",
             },
             { role: "user", content: section.content.substring(0, 4000) },
           ],
           max_tokens: 75,
           temperature: 0.5,
         });
-        section.summary = summaryResponse.choices[0].message.content || "No summary available.";
+        section.summary =
+          summaryResponse.choices[0].message.content || "No summary available.";
       } catch (sectionError) {
-        console.error("Section processing error for", section.heading, ":", sectionError.message);
+        console.error(
+          "Section processing error for",
+          section.heading,
+          ":",
+          sectionError.message
+        );
         section.embedding = [];
         section.summary = "Failed to generate summary.";
       }
@@ -141,9 +155,15 @@ router.post("/upload", upload.single("pdf"), async (req, res) => {
       if (!sections[i].embedding.length) continue;
       for (let j = 0; j < sections.length; j++) {
         if (i !== j && sections[j].embedding.length) {
-          const similarity = cosineSimilarity(sections[i].embedding, sections[j].embedding);
+          const similarity = cosineSimilarity(
+            sections[i].embedding,
+            sections[j].embedding
+          );
           if (similarity > 0.8) {
-            sections[i].related.push({ heading: sections[j].heading, index: j });
+            sections[i].related.push({
+              heading: sections[j].heading,
+              index: j,
+            });
           }
         }
       }
@@ -169,17 +189,25 @@ router.post("/ask", async (req, res) => {
     return res.status(400).json({ error: "Question is required" });
   }
 
-  if (!context || (!context.text && (!context.sections || !context.sections.length))) {
+  if (
+    !context ||
+    (!context.text && (!context.sections || !context.sections.length))
+  ) {
     return res.status(400).json({ error: "Context is missing or invalid" });
   }
 
   try {
-    const content = sectionIndex !== undefined && context.sections && context.sections[sectionIndex]
-      ? context.sections[sectionIndex].content
-      : context.text;
+    const content =
+      sectionIndex !== undefined &&
+      context.sections &&
+      context.sections[sectionIndex]
+        ? context.sections[sectionIndex].content
+        : context.text;
 
     if (!content) {
-      return res.status(400).json({ error: "No valid content for the selected section" });
+      return res
+        .status(400)
+        .json({ error: "No valid content for the selected section" });
     }
 
     const response = await openai.chat.completions.create({
@@ -187,18 +215,23 @@ router.post("/ask", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "Answer the question based on the provided context. Be precise and relevant.",
+          content:
+            "Answer the question based on the provided context. Be precise and relevant.",
         },
         {
           role: "user",
-          content: `Context: ${content.substring(0, 4000)}\nQuestion: ${question}`,
+          content: `Context: ${content.substring(
+            0,
+            4000
+          )}\nQuestion: ${question}`,
         },
       ],
       max_tokens: 200,
       temperature: 0.5,
     });
 
-    const answer = response.choices[0].message.content || "No answer available.";
+    const answer =
+      response.choices[0].message.content || "No answer available.";
     res.status(200).json({ answer });
   } catch (error) {
     console.error("Question error:", error);
