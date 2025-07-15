@@ -9,10 +9,7 @@ const app = express();
 
 connectDB();
 
-const allowedOrigins = [
-  "https://aipdfreader-three.vercel.app",
-  "https://pagify.aakarshtiwari.com",
-];
+const allowedOrigins = ["https://pagify.aakarshtiwari.com"];
 
 app.use(
   cors({
@@ -38,7 +35,7 @@ app.get("/health", (req, res) => {
 const preWarm = async () => {
   try {
     const response = await fetch(
-      "http://localhost:" + (process.env.PORT || 10000) + "/health"
+      "https://aipdfreader-0f7m.onrender.com/health"
     );
     if (response.ok) {
       console.log("Pre-warm: Health check successful");

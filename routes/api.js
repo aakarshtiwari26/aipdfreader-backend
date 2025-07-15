@@ -16,10 +16,24 @@ const openai = new OpenAI({
 
 const DocumentSchema = new mongoose.Schema({
   text: { type: String, required: true },
-  summary: { type: String, required: true },
+  sections: [
+    {
+      heading: String,
+      content: String,
+      summary: String,
+      embedding: [Number],
+    },
+  ],
   createdAt: { type: Date, default: Date.now },
 });
 const Document = mongoose.model("Document", DocumentSchema);
+
+function cosineSimilarity(vecA, vecB) {
+  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+  const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+  const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+  return dotProduct / (magnitudeA * magnitudeB);
+}
 
 router.post("/upload", upload.single("pdf"), async (req, res) => {
   try {
@@ -40,26 +54,92 @@ router.post("/upload", upload.single("pdf"), async (req, res) => {
       return res.status(400).json({ error: "No readable text found in PDF" });
     }
 
-    const summaryResponse = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content:
-            "Summarize the following text in 100 words or less. Be concise and capture key points.",
-        },
-        { role: "user", content: text.substring(0, 4000) },
-      ],
-      max_tokens: 150,
-      temperature: 0.5,
-    });
+    // Attempt to extract structure using pdf-parse metadata
+    const lines = text.split("\n").filter((line) => line.trim());
+    let sections = [];
+    let currentSection = { heading: "Introduction", content: "" };
+    const headingRegex = /^(#{1,3})\s+(.+)$/; // Detect markdown-like headings (#, ##, ###)
 
-    const summary = summaryResponse.choices[0].message.content;
+    for (const line of lines) {
+      const match = line.match(headingRegex);
+      if (match) {
+        if (currentSection.content) {
+          sections.push(currentSection);
+        }
+        currentSection = { heading: match[2].trim(), content: "" };
+      } else {
+        currentSection.content += line + "\n";
+      }
+    }
+    if (currentSection.content) {
+      sections.push(currentSection);
+    }
 
-    const doc = new Document({ text, summary });
+    // Fallback: Use GPT to infer sections if none found
+    if (sections.length <= 1) {
+      const structureResponse = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Break the following text into sections with headings. Return a JSON array of objects with 'heading' and 'content' keys.",
+          },
+          { role: "user", content: text.substring(0, 4000) },
+        ],
+        max_tokens: 500,
+        temperature: 0.5,
+      });
+      sections = JSON.parse(structureResponse.choices[0].message.content);
+    }
+
+    // Generate embeddings and summaries for each section
+    for (const section of sections) {
+      const embeddingResponse = await openai.embeddings.create({
+        model: "text-embedding-ada-002",
+        input: section.content.substring(0, 4000),
+      });
+      section.embedding = embeddingResponse.data[0].embedding;
+
+      const summaryResponse = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Summarize the following section in 50 words or less. Be concise.",
+          },
+          { role: "user", content: section.content.substring(0, 4000) },
+        ],
+        max_tokens: 75,
+        temperature: 0.5,
+      });
+      section.summary = summaryResponse.choices[0].message.content;
+    }
+
+    // Compute related sections
+    for (let i = 0; i < sections.length; i++) {
+      sections[i].related = [];
+      for (let j = 0; j < sections.length; j++) {
+        if (i !== j) {
+          const similarity = cosineSimilarity(
+            sections[i].embedding,
+            sections[j].embedding
+          );
+          if (similarity > 0.8) {
+            sections[i].related.push({
+              heading: sections[j].heading,
+              index: j,
+            });
+          }
+        }
+      }
+    }
+
+    const doc = new Document({ text, sections });
     await doc.save();
 
-    res.status(200).json({ text, summary });
+    res.status(200).json({ text, sections });
   } catch (error) {
     console.error("Upload error:", error);
     res
@@ -69,13 +149,18 @@ router.post("/upload", upload.single("pdf"), async (req, res) => {
 });
 
 router.post("/ask", async (req, res) => {
-  const { question, context } = req.body;
+  const { question, context, sectionIndex } = req.body;
 
   if (!question || !context) {
     return res.status(400).json({ error: "Question and context are required" });
   }
 
   try {
+    const content =
+      sectionIndex !== undefined
+        ? context.sections[sectionIndex]?.content || context.text
+        : context.text;
+
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
@@ -86,7 +171,7 @@ router.post("/ask", async (req, res) => {
         },
         {
           role: "user",
-          content: `Context: ${context.substring(
+          content: `Context: ${content.substring(
             0,
             4000
           )}\nQuestion: ${question}`,
