@@ -165,14 +165,22 @@ router.post("/upload", upload.single("pdf"), async (req, res) => {
 router.post("/ask", async (req, res) => {
   const { question, context, sectionIndex } = req.body;
 
-  if (!question || !context) {
-    return res.status(400).json({ error: "Question and context are required" });
+  if (!question) {
+    return res.status(400).json({ error: "Question is required" });
+  }
+
+  if (!context || (!context.text && (!context.sections || !context.sections.length))) {
+    return res.status(400).json({ error: "Context is missing or invalid" });
   }
 
   try {
     const content = sectionIndex !== undefined && context.sections && context.sections[sectionIndex]
       ? context.sections[sectionIndex].content
       : context.text;
+
+    if (!content) {
+      return res.status(400).json({ error: "No valid content for the selected section" });
+    }
 
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -190,7 +198,7 @@ router.post("/ask", async (req, res) => {
       temperature: 0.5,
     });
 
-    const answer = response.choices[0].message.content;
+    const answer = response.choices[0].message.content || "No answer available.";
     res.status(200).json({ answer });
   } catch (error) {
     console.error("Question error:", error);
